@@ -1,0 +1,28 @@
+## biodiversity
+BiodiversityData.R: wrangle spatial data layers from biodiversitymapping.org and IUCN Red List
+BiodiversityModeling.R: wrangling/analysis of environmental characteristics of species description locations
+GBIF_species_descriptions.R: investigation of using GBIF for species description locations, which may be unreliable
+
+## climate
+Extract_worldclim.R: pull worldclim climate rasters
+PCA_worldclim: exploratory principal component analysis for condensing many climate rasters into fewer, composite variables
+
+## DEM
+CopernicusDEMdata.R: pull digital elevation model (DEM) data from Copernicus
+
+## ecoregions
+ecoregion_analysis.R wrangling/analysis of World Ecosystems ecoregion data, mainly the Temp_Moist classification, which corresponds to "climate zones" similar to ecoregions
+
+## HumanFootprint
+HumanFootprint.R: wrangling of Human Footprint data from Sun et al. (2026)
+
+## HydroSheds
+HydroSheds.R: wrangling of river data from HydroSheds to calculate river density
+
+## protected_areas
+ProtectedAreas.R: pull and wrangle protected area data from World Database of Protected Areas
+ProtectedAreasGBIF.R: basic analysis of GBIF observations in protected areas
+
+## roads
+Roads.R: wrangling of road data from GRIP to calculate road density
+
