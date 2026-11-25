@@ -1,0 +1,47 @@
+Field explanations for mammal_descriptoin_location_attributes.csv
+
+Please assume spatial resolution of 1 km unless otherwise specified
+Please assume WGS 1984 GLANCE South America projection unless otherwise specified (https://spatialreference.org/ref/epsg/10603/)
+
+ID: record ID
+MAT_C: mean annual temperature (deg C) from WorldClim 2.1 (1970-2000)
+MAP_mm: mean annual precipitation (mm) from WorldClim 2.1 (1970-2000)
+TRI_3x3m: terrain ruggedness index (m) calculated using default 3x3 cell neighborhood around focal cell
+TRI_11x11m: terrain ruggedness index (m) calculated using 11x11 cell neighborhood around focal cell. This was originally done prior to resampling 90 m DEM data to 1 km so is likely less useful when using 1 km data.
+DEM_m: elevation (m) originally from Copernicus 90 m elevation data prior to resampling
+road_dens_kmsqkm: road density from GRIP calculated as length of road (km) per square km
+HF_2020: Human Footprint index from Sun et al. (2026)
+river_dens_kmsqkm: river density from HydroSheds calculated as length of river (km) per square km
+ecoregion: from World Ecosystems database (Temp_Moist climate zone classification), similar conceptually to ecoregion. This attribute is from the original 250 m data prior to resampling.
+ecoregion_fac: numeric value assigned to each ecoregion
+p_areasqkm: area of each spatially contiguous (8 directions) ecoregion patch (sq km) from R landscapemetrics
+p_coresqkm: core area of each spatially contiguous (8 directions) ecoregion patch (sq km) from R landscapemetrics, with edge depth of 1 km to define core area
+p_cai: percentage of each spatially contiguous (8 directions) ecoregion patch from R landscapemetrics that is core habitat
+p_ncore: number of core areas within each spatially contiguous (8 directions) ecoregion patch from R landscapemetrics that is core habitat with edge depth of 1 km to define core area
+p_shape: shape index of each spatially contiguous (8 directions) ecoregion patch from R landscapemetrics. 1 = perfect square and higher values represent greater shape complexity.
+p_contig: contiguity index of each spatially contiguous (8 directions) ecoregion patch from R landscapemetrics. Ranges from 0-1 with 0 representing low contiguity. Diagonally connected pixels are considered less contiguous/connected.
+p_enn_m: Euclidean nearest neighbor distance (m) to nearest patch of same class (ecoregion)
+PA: Y for in protected area, N for not based on World Database of Protected Areas
+PA_indig: Y for in indigenous protected area, N for not based on World Database of Protected Areas
+KBA: Y for in Key Biodiversity Area
+n_classes_10km: number of ecoregion classes within 10 km buffer of species description location
+most_abundant_class_10km: ecoregion class that is most abundant within 10 km buffer of species description location
+most_abundant_pct_10km: percent coverage of most abundant ecoregion class within 10 km buffer of species description location
+point_class_pct_10km: percent coverage of ecoregion class at species description location within 10 km buffer of species description location
+shannon_index_10km: Shannon's diversity index within 10 km buffer of species description location. Higher values represent greater diversity.
+n_classes_25km: number of ecoregion classes within 25 km buffer of species description location
+most_abundant_class_25km: ecoregion class that is most abundant within 25 km buffer of species description location
+most_abundant_pct_25km: percent coverage of most abundant ecoregion class within 25 km buffer of species description location
+point_class_pct_25km: percent coverage of ecoregion class at species description location within 25 km buffer of species description location
+shannon_index_25km: Shannon's diversity index within 25 km buffer of species description location. Higher values represent greater diversity.
+n_classes_50km: number of ecoregion classes within 50 km buffer of species description location
+most_abundant_class_50km: ecoregion class that is most abundant within 50 km buffer of species description location
+most_abundant_pct_50km: percent coverage of most abundant ecoregion class within 50 km buffer of species description location
+point_class_pct_50km: percent coverage of ecoregion class at species description location within 50 km buffer of species description location
+shannon_index_50km: Shannon's diversity index within 50 km buffer of species description location. Higher values represent greater diversity.
+Country: country in which species record is found based on WorldCountries GIS layer
+
+For all other fields, see Mammal Diversity Database metadata: https://www.mammaldiversity.org/about/
+Note: authority1 field can be used to subset records by year. This field is described in the Mammal Diversity Database metadata as: "species authority: year that author first described the species as sourced from the Species_Syn_Current sheet"
+
+

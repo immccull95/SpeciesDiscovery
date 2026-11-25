@@ -2,6 +2,7 @@
 BiodiversityData.R: wrangle spatial data layers from biodiversitymapping.org and IUCN Red List
 BiodiversityModeling.R: wrangling/analysis of environmental characteristics of species description locations
 GBIF_species_descriptions.R: investigation of using GBIF for species description locations, which may be unreliable
+MDD_analysis.R: basic analysis of Mammal Diversity Database
 
 ## climate
 Extract_worldclim.R: pull worldclim climate rasters

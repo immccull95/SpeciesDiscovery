@@ -26,68 +26,68 @@ countries_aoi_GLANCE <- project(countries_aoi, "EPSG:10603")
 world_ecosystems <- rast("WorldEcosystems/WorldEcosystems.tif")
 
 # "activate" world ecosystem attribute (finest detail)
-activeCat(world_ecosystems) <- "W_Ecosystm" 
-
-# clip to area of interest
-#world_ecosystems_peru <- crop(world_ecosystems, peru, mask=T)
-#plot(world_ecosystems_peru)
-
-world_ecosystems_aoi <- crop(world_ecosystems, countries_aoi, mask=T)
-plot(world_ecosystems_aoi)
-
-# reproject to GLANCE
-#world_ecosystems_peru <- project(world_ecosystems_peru, "EPSG:10603", method="near",
-#                                 res=c(250,250))#,
-                                 #filename="WorldEcosystems/WorldEcosystems_Peru.tif",
-                                 #overwrite=T)
-
-world_ecosystems_aoi <- project(world_ecosystems_aoi, "EPSG:10603", method="near",
-                                 res=c(250,250),
-          filename="WorldEcosystems/WorldEcosystems_pilot.tif",
-          overwrite=T)
-# get raster attribute table
-world_ecosystems_aoi_df <- as.data.frame(cats(world_ecosystems_aoi))
-
-# However, the count column is for the whole world and we need just our
-# country subset
-freq_table <- as.data.frame(freq(world_ecosystems_aoi))
-
-world_ecosystems_aoi_df <- merge(world_ecosystems_aoi_df[,c(1:11)], freq_table,
-              by.x='W_Ecosystm', by.y='value', all=F)
-
-# Calculate relative abundance of different ecosystem classes
-world_ecosystems_aoi_df$rarity_rank <- rank(world_ecosystems_aoi_df$count,
-                                      ties.method="average")
-world_ecosystems_aoi_df$pct_coverage <- round(world_ecosystems_aoi_df$count/sum(world_ecosystems_aoi_df$count), 4)*100
-world_ecosystems_aoi_df$areasqkm_coverage <- world_ecosystems_aoi_df$count * 0.0625
-world_ecosystems_aoi_df$ID <- world_ecosystems_aoi_df$Value
-
-# rare ecosystems < 1 km2
-world_ecosystems_aoi_1km <- subset(world_ecosystems_aoi_df, areasqkm_coverage < 1)
-#write.csv(world_ecosystems_peru_1km, "world_ecosystems_peru_1km.csv", row.names=F)
-
-# Identify individual ecosystems that take up less than 1% of area of interest
-world_ecosystems_aoi_1pct <- subset(world_ecosystems_aoi_df, pct_coverage <=1)$ID
-
-# Force extract the attribute table, preserving categorical data
-rat <- as.data.frame(cats(world_ecosystems_aoi)[1])
-
-# Match strings using position-based indexing (Column 1 ID, Column 2 is text)
-matching_ids <- rat[rat[, 2] %in% world_ecosystems_aoi_1pct, 1]
-
-# Create binary T/F mask
-tf_mask <- world_ecosystems_aoi %in% matching_ids
-
-# Mask the original raster (keeps original values, turns FALSE into NA)
-world_ecosystems_aoi_1pct <- mask(world_ecosystems_aoi, tf_mask, maskvalue = F)
-plot(world_ecosystems_aoi_1pct)
-
-#hist(world_ecosystems_aoi_df$areasqkm_coverage, main='World ecosystems',
-#     xlab='sq km', breaks=seq(0,1500000,1000))
-
-hist(world_ecosystems_aoi_df$pct_coverage, main='World ecosystems',
-     xlab='Percent coverage', xlim=c(0,50),
-     breaks=seq(0,50,0.5))
+# activeCat(world_ecosystems) <- "W_Ecosystm" 
+# 
+# # clip to area of interest
+# #world_ecosystems_peru <- crop(world_ecosystems, peru, mask=T)
+# #plot(world_ecosystems_peru)
+# 
+# world_ecosystems_aoi <- crop(world_ecosystems, countries_aoi, mask=T)
+# plot(world_ecosystems_aoi)
+# 
+# # reproject to GLANCE
+# #world_ecosystems_peru <- project(world_ecosystems_peru, "EPSG:10603", method="near",
+# #                                 res=c(250,250))#,
+#                                  #filename="WorldEcosystems/WorldEcosystems_Peru.tif",
+#                                  #overwrite=T)
+# 
+# world_ecosystems_aoi <- project(world_ecosystems_aoi, "EPSG:10603", method="near",
+#                                  res=c(250,250),
+#           filename="WorldEcosystems/WorldEcosystems_pilot.tif",
+#           overwrite=T)
+# # get raster attribute table
+# world_ecosystems_aoi_df <- as.data.frame(cats(world_ecosystems_aoi))
+# 
+# # However, the count column is for the whole world and we need just our
+# # country subset
+# freq_table <- as.data.frame(freq(world_ecosystems_aoi))
+# 
+# world_ecosystems_aoi_df <- merge(world_ecosystems_aoi_df[,c(1:11)], freq_table,
+#               by.x='W_Ecosystm', by.y='value', all=F)
+# 
+# # Calculate relative abundance of different ecosystem classes
+# world_ecosystems_aoi_df$rarity_rank <- rank(world_ecosystems_aoi_df$count,
+#                                       ties.method="average")
+# world_ecosystems_aoi_df$pct_coverage <- round(world_ecosystems_aoi_df$count/sum(world_ecosystems_aoi_df$count), 4)*100
+# world_ecosystems_aoi_df$areasqkm_coverage <- world_ecosystems_aoi_df$count * 0.0625
+# world_ecosystems_aoi_df$ID <- world_ecosystems_aoi_df$Value
+# 
+# # rare ecosystems < 1 km2
+# world_ecosystems_aoi_1km <- subset(world_ecosystems_aoi_df, areasqkm_coverage < 1)
+# #write.csv(world_ecosystems_peru_1km, "world_ecosystems_peru_1km.csv", row.names=F)
+# 
+# # Identify individual ecosystems that take up less than 1% of area of interest
+# world_ecosystems_aoi_1pct <- subset(world_ecosystems_aoi_df, pct_coverage <=1)$ID
+# 
+# # Force extract the attribute table, preserving categorical data
+# rat <- as.data.frame(cats(world_ecosystems_aoi)[1])
+# 
+# # Match strings using position-based indexing (Column 1 ID, Column 2 is text)
+# matching_ids <- rat[rat[, 2] %in% world_ecosystems_aoi_1pct, 1]
+# 
+# # Create binary T/F mask
+# tf_mask <- world_ecosystems_aoi %in% matching_ids
+# 
+# # Mask the original raster (keeps original values, turns FALSE into NA)
+# world_ecosystems_aoi_1pct <- mask(world_ecosystems_aoi, tf_mask, maskvalue = F)
+# plot(world_ecosystems_aoi_1pct)
+# 
+# #hist(world_ecosystems_aoi_df$areasqkm_coverage, main='World ecosystems',
+# #     xlab='sq km', breaks=seq(0,1500000,1000))
+# 
+# hist(world_ecosystems_aoi_df$pct_coverage, main='World ecosystems',
+#      xlab='Percent coverage', xlim=c(0,50),
+#      breaks=seq(0,50,0.5))
 
 #### Extract rare ecosystems for landscape metrics analysis ####
 # test_eco <- 203 #ecosystem ID
@@ -117,7 +117,7 @@ hist(world_ecosystems_aoi_df$pct_coverage, main='World ecosystems',
 activeCat(world_ecosystems) <- "Temp_Moist" 
 
 # clip to AOI
-#world_ecosystems_aoiTM <- crop(world_ecosystems, countries_aoi, mask=T)
+world_ecosystems_aoiTM <- crop(world_ecosystems, countries_aoi, mask=T)
 #plot(world_ecosystems_aoiTM)
 
 # update: buffered area to allow "patches" to bleed over country borders
@@ -129,9 +129,9 @@ plot(world_ecosystems_aoiTM)
 
 # reproject to GLANCE
 world_ecosystems_aoiTM <- project(world_ecosystems_aoiTM, "EPSG:10603", method="near",
-                                 res=c(1000,1000))#,
-            #filename="WorldEcosystems/WorldEcosystems_aoiTM_1km.tif",
-            #overwrite=T)
+                                 res=c(1000,1000),
+            filename="WorldEcosystems/WorldEcosystems_aoiTM_1km.tif",
+            overwrite=T)
 
 # frequency table
 aoiTM_df <- as.data.frame(freq(world_ecosystems_aoiTM$Temp_Moist))

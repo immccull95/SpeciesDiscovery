@@ -26,6 +26,9 @@ countries_aoi_GLANCE <- project(countries_aoi, "EPSG:10603")
 wdpa <- vect("Data/protected_areas/pilot/COL_ECU_PER_BOL_wdpa.shp")
 wdpa_indig <- subset(wdpa, wdpa$GOV_TYPE=='Indigenous Peoples')
 
+## Key Biodiversity Areas
+KBA <- vect("Data/KBA/KBA_Data/KBA_Data/pilot/KBA_pilot.shp")
+
 #plot(countries_aoi_GLANCE)
 #plot(wdpa_indig, add=T, col='green')
 
@@ -39,7 +42,7 @@ HF_2020 <- rast("Data/HumanFootprint/HF_2020_pilot.tif")
 river_density <- rast("Data/HydroSheds/pilot/river_density_pilot.tif")
 
 ## World ecosystems
-world_ecosystems <- rast("Data/ecoregions/WorldEcosystems/WorldEcosystems_pilot.tif")
+world_ecosystems <- rast("Data/ecoregions/WorldEcosystems/WorldEcosystems_aoiTM_1km.tif")
 
 # patch metrics from landscapemetrics (ecoregions: Temp_Moist attribute)
 p_area <- rast("Data/ecoregions/WorldEcosystems/ecoregion_patches/pilot_p_area.tif")
@@ -475,12 +478,185 @@ PA_indig_MDD <- terra::intersect(MDD_GLANCE_pilot, wdpa_indig)
 table(PA_indig_MDD$Country)
 dim(PA_indig_MDD)
 
+# add columns to attribute table
+MDD_GLANCE_pilot$PA <- ifelse(is.related(MDD_GLANCE_pilot, wdpa, "intersects"), "Y", "N")
+MDD_GLANCE_pilot$PA_indig <- ifelse(is.related(MDD_GLANCE_pilot, wdpa_indig, "intersects"), "Y", "N")
+MDD_GLANCE_pilot$ID <- seq(1, nrow(MDD_GLANCE_pilot),1)
+
+# Identify those in KBA
+MDD_GLANCE_pilot$KBA <- ifelse(is.related(MDD_GLANCE_pilot, KBA, "intersects"), "Y", "N")
+
+# Create table to join to other data for PA and KBA
+PAKBA_MDD_df <- as.data.frame(MDD_GLANCE_pilot[,c('ID','PA','PA_indig','KBA')])
+table(PAKBA_MDD_df$KBA)
+table(PAKBA_MDD_df$PA)
+table(PAKBA_MDD_df$PA_indig)
+
 ## Count descriptions in various ecoregions
 activeCat(world_ecosystems) <- "Temp_Moist" 
 
 ecoregion_MDD <- terra::extract(world_ecosystems, MDD_GLANCE_pilot)
 names(ecoregion_MDD) <- c('ID','ecoregion')
 ecoregion_MDD$ecoregion_fac <- as.numeric(ecoregion_MDD$ecoregion)
+
+## Calculate focal stats within buffer distances around description points
+activeCat(world_ecosystems) <- "Temp_Moist" 
+focal_pts <- MDD_GLANCE_pilot
+
+# Extract the Temp_Moist class at each point
+pt_class <- terra::extract(world_ecosystems, focal_pts)[, 2]
+focal_pts$point_class <- as.character(pt_class)
+
+## 10 km buffer
+buffer_width <- 10000 #m 
+
+# Buffer points and extract cell overlap fractions
+pts_buff <- buffer(focal_pts, width = buffer_width)
+ext_vals <- terra::extract(world_ecosystems, pts_buff, exact = T)
+colnames(ext_vals)[2] <- "Temp_Moist"
+ext_vals$Temp_Moist <- as.character(ext_vals$Temp_Moist)
+
+# Remove NA cells (e.g., ocean/nodata) so percentages reflect valid land cover
+ext_vals <- ext_vals[!is.na(ext_vals$Temp_Moist), ]
+
+# Sum cell fractions per point (ID) and class, then calculate % coverage
+class_sums <- aggregate(fraction ~ ID + Temp_Moist, data = ext_vals, FUN = sum)
+class_sums$pct <- ave(class_sums$fraction, class_sums$ID, FUN = function(x) (x / sum(x)) * 100)
+
+## Focal metrics at each point
+n_pts <- nrow(focal_pts)
+
+# Number of classes within buffer
+richness <- aggregate(Temp_Moist ~ ID, data = class_sums, FUN = length)
+focal_pts$n_classes_10km <- richness$Temp_Moist[match(1:n_pts, richness$ID)]
+
+# Most abundant class and pct coverage of most abundant class
+ordered_df <- class_sums[order(class_sums$ID, -class_sums$pct), ]
+top_df <- ordered_df[!duplicated(ordered_df$ID), ]
+
+focal_pts$most_abundant_class_10km <- top_df$Temp_Moist[match(1:n_pts, top_df$ID)]
+focal_pts$most_abundant_pct_10km   <- round(top_df$pct[match(1:n_pts, top_df$ID)], 2)
+
+# Percent coverage of the class represented at the point location
+pt_lookup <- data.frame(ID = 1:n_pts, Temp_Moist = focal_pts$point_class)
+focal_match <- merge(pt_lookup, class_sums[, c("ID", "Temp_Moist", "pct")],
+                     by = c("ID", "Temp_Moist"), all.x = TRUE)
+focal_match <- focal_match[order(focal_match$ID), ]
+
+focal_pts$point_class_pct_10km <- round(focal_match$pct, 2)
+
+# Shannon's Diversity Index (natural log, matching vegan & landscapemetrics)
+shannon <- aggregate(pct ~ ID, data = class_sums, FUN = function(pct) {
+  p <- pct / 100
+  p <- p[p > 0]
+  -sum(p * log(p))
+})
+
+focal_pts$shannon_index_10km <- round(shannon$pct[match(1:n_pts, shannon$ID)], 4)
+
+# Output subset
+#View(as.data.frame(focal_pts))
+#focal_df_10km <- as.data.frame(focal_pts[,64:69])
+
+
+## 25 km buffer
+buffer_width <- 25000 #m 
+
+# Buffer points and extract cell overlap fractions
+pts_buff <- buffer(focal_pts, width = buffer_width)
+ext_vals <- terra::extract(world_ecosystems, pts_buff, exact = T)
+colnames(ext_vals)[2] <- "Temp_Moist"
+ext_vals$Temp_Moist <- as.character(ext_vals$Temp_Moist)
+
+# Remove NA cells (e.g., ocean/nodata) so percentages reflect valid land cover
+ext_vals <- ext_vals[!is.na(ext_vals$Temp_Moist), ]
+
+# Sum cell fractions per point (ID) and class, then calculate % coverage
+class_sums <- aggregate(fraction ~ ID + Temp_Moist, data = ext_vals, FUN = sum)
+class_sums$pct <- ave(class_sums$fraction, class_sums$ID, FUN = function(x) (x / sum(x)) * 100)
+
+## Focal metrics at each point
+n_pts <- nrow(focal_pts)
+
+# Number of classes within buffer
+richness <- aggregate(Temp_Moist ~ ID, data = class_sums, FUN = length)
+focal_pts$n_classes_25km <- richness$Temp_Moist[match(1:n_pts, richness$ID)]
+
+# Most abundant class and pct coverage of most abundant class
+ordered_df <- class_sums[order(class_sums$ID, -class_sums$pct), ]
+top_df <- ordered_df[!duplicated(ordered_df$ID), ]
+
+focal_pts$most_abundant_class_25km <- top_df$Temp_Moist[match(1:n_pts, top_df$ID)]
+focal_pts$most_abundant_pct_25km   <- round(top_df$pct[match(1:n_pts, top_df$ID)], 2)
+
+# Percent coverage of the class represented at the point location
+pt_lookup <- data.frame(ID = 1:n_pts, Temp_Moist = focal_pts$point_class)
+focal_match <- merge(pt_lookup, class_sums[, c("ID", "Temp_Moist", "pct")],
+                     by = c("ID", "Temp_Moist"), all.x = TRUE)
+focal_match <- focal_match[order(focal_match$ID), ]
+
+focal_pts$point_class_pct_25km <- round(focal_match$pct, 2)
+
+# Shannon's Diversity Index (natural log, matching vegan & landscapemetrics)
+shannon <- aggregate(pct ~ ID, data = class_sums, FUN = function(pct) {
+  p <- pct / 100
+  p <- p[p > 0]
+  -sum(p * log(p))
+})
+
+focal_pts$shannon_index_25km <- round(shannon$pct[match(1:n_pts, shannon$ID)], 4)
+
+
+## 50 km buffer (seems to get slower with larger buffers)
+buffer_width <- 50000 #m 
+
+# Buffer points and extract cell overlap fractions
+pts_buff <- buffer(focal_pts, width = buffer_width)
+ext_vals <- terra::extract(world_ecosystems, pts_buff, exact = T)
+colnames(ext_vals)[2] <- "Temp_Moist"
+ext_vals$Temp_Moist <- as.character(ext_vals$Temp_Moist)
+
+# Remove NA cells (e.g., ocean/nodata) so percentages reflect valid land cover
+ext_vals <- ext_vals[!is.na(ext_vals$Temp_Moist), ]
+
+# Sum cell fractions per point (ID) and class, then calculate % coverage
+class_sums <- aggregate(fraction ~ ID + Temp_Moist, data = ext_vals, FUN = sum)
+class_sums$pct <- ave(class_sums$fraction, class_sums$ID, FUN = function(x) (x / sum(x)) * 100)
+
+## Focal metrics at each point
+n_pts <- nrow(focal_pts)
+
+# Number of classes within buffer
+richness <- aggregate(Temp_Moist ~ ID, data = class_sums, FUN = length)
+focal_pts$n_classes_50km <- richness$Temp_Moist[match(1:n_pts, richness$ID)]
+
+# Most abundant class and pct coverage of most abundant class
+ordered_df <- class_sums[order(class_sums$ID, -class_sums$pct), ]
+top_df <- ordered_df[!duplicated(ordered_df$ID), ]
+
+focal_pts$most_abundant_class_50km <- top_df$Temp_Moist[match(1:n_pts, top_df$ID)]
+focal_pts$most_abundant_pct_50km   <- round(top_df$pct[match(1:n_pts, top_df$ID)], 2)
+
+# Percent coverage of the class represented at the point location
+pt_lookup <- data.frame(ID = 1:n_pts, Temp_Moist = focal_pts$point_class)
+focal_match <- merge(pt_lookup, class_sums[, c("ID", "Temp_Moist", "pct")],
+                     by = c("ID", "Temp_Moist"), all.x = TRUE)
+focal_match <- focal_match[order(focal_match$ID), ]
+
+focal_pts$point_class_pct_50km <- round(focal_match$pct, 2)
+
+# Shannon's Diversity Index (natural log, matching vegan & landscapemetrics)
+shannon <- aggregate(pct ~ ID, data = class_sums, FUN = function(pct) {
+  p <- pct / 100
+  p <- p[p > 0]
+  -sum(p * log(p))
+})
+
+focal_pts$shannon_index_50km <- round(shannon$pct[match(1:n_pts, shannon$ID)], 4)
+
+# Extract subset for joining later
+ecoregion_focal_df <- as.data.frame(focal_pts[,c(64:79)])
+ecoregion_focal_df$ID <- seq(1, nrow(focal_pts), 1)
 
 ## extract patch metrics
 # patch area
@@ -523,18 +699,20 @@ MDD_combined <- MAT_MDD %>%
   left_join(HF_2020_MDD, by = "ID") %>%
   left_join(river_dens_MDD, by = "ID") %>%
   left_join(ecoregion_MDD, by = "ID") %>%
-  left_join(p_area_MDD, by = 'ID') %>%
-  left_join(p_core_MDD, by = 'ID') %>%
-  left_join(p_cai_MDD, by = 'ID') %>%
-  left_join(p_ncore_MDD, by = 'ID') %>%
-  left_join(p_shape_MDD, by = 'ID') %>%
-  left_join(p_contig_MDD, by = 'ID') %>%
-  left_join(p_enn_MDD, by = 'ID')
+  left_join(p_area_MDD, by = "ID") %>%
+  left_join(p_core_MDD, by = "ID") %>%
+  left_join(p_cai_MDD, by = "ID") %>%
+  left_join(p_ncore_MDD, by = "ID") %>%
+  left_join(p_shape_MDD, by = "ID") %>%
+  left_join(p_contig_MDD, by = "ID") %>%
+  left_join(p_enn_MDD, by = "ID") %>%
+  left_join(PAKBA_MDD_df, by = "ID") %>%
+  left_join(ecoregion_focal_df[,c(2:17)], by = "ID")
 
 # Rejoin attributes from description location points
 # order of rows is the same
-MDD_GLANCE_pilot$ID <- seq(1, nrow(MDD_GLANCE_pilot), 1)
-MDD_combined <- merge(MDD_combined, as.data.frame(MDD_GLANCE_pilot), by="ID")
+#MDD_GLANCE_pilot$ID <- seq(1, nrow(MDD_GLANCE_pilot), 1)
+MDD_combined <- merge(MDD_combined, as.data.frame(MDD_GLANCE_pilot[,c(1:59,63)]), by="ID")
 table(MDD_combined$Country) #summary by country
 summary(MDD_combined$authority1)
 
